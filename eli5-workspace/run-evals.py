@@ -100,7 +100,13 @@ def grade_response(response_file: Path, assertions: list[str]) -> str:
         f"{i + 1}. {a}" for i, a in enumerate(assertions)
     )
     return run_claude(
-        f"""你是一位严格的评分员。请根据每条断言对下面的回答评分。
+        f"""你是一位严格到近乎苛刻的评分员。请根据每条断言对下面的回答逐条评分。
+
+评分规则：
+- 只有回答中「明确、直接」体现了断言要求，才给 PASS。仅仅是「隐含」「接近」「大意如此」「算做到了」一律给 FAIL。
+- 每条断言里的每个要素都必须满足；有多个要素（①②③④ 或「A/B/C」）时，缺任何一个都判 FAIL。
+- 证据必须引用回答中的具体原文片段；引不出原文就判 FAIL。
+- 不要因为回答整体写得不错就放宽标准，只对照断言的硬性要求。
 
 回答内容：
 {response_content}
@@ -109,9 +115,9 @@ def grade_response(response_file: Path, assertions: list[str]) -> str:
 {assertions_text}
 
 对每条断言，输出恰好一行：
-PASS|<序号>|<简要证据>
+PASS|<序号>|<引用原文的简要证据>
 或
-FAIL|<序号>|<简要证据>
+FAIL|<序号>|<缺失的具体要素>
 
 只输出这些行，不要输出任何其他内容。"""
     )
@@ -124,7 +130,8 @@ def parse_grades(grade_output: str, expected_count: int) -> list[tuple[str, str,
         if len(parts) == 3:
             verdict = parts[0].strip()
             if verdict in ("PASS", "FAIL"):
-                results.append((verdict, parts[1].strip(), parts[2].strip()))
+                raw_num = parts[1].strip().strip("<>#")
+                results.append((verdict, raw_num, parts[2].strip()))
                 if len(results) == expected_count:
                     break
     return results
