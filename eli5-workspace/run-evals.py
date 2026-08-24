@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-"""ELI5-CN Skill 评测脚本
+"""ELI5 Skill 评测脚本（文字版 eli5-talk + 图解版 eli5-cn 通用）
 
 对每个测试用例分别用「装了 skill」和「裸模型（baseline）」运行，再用 Claude 自动逐条评分。
 
 前置条件：
   - 已安装 claude CLI（npm install -g @anthropic-ai/claude-code）
-  - skill 文件已就位（默认读取 ~/.claude/skills/eli5-cn/SKILL.md）
+  - skill 文件已就位（默认读取 ~/.claude/skills/eli5-talk/SKILL.md）
 
 用法：
   # 默认：skill vs baseline 对比
@@ -39,11 +39,11 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 EVALS_JSON = SCRIPT_DIR / "evals.json"
-DEFAULT_SKILL = Path.home() / ".claude" / "skills" / "eli5-cn" / "SKILL.md"
+DEFAULT_SKILL = Path.home() / ".claude" / "skills" / "eli5-talk" / "SKILL.md"
 
 
-def load_evals():
-    with open(EVALS_JSON, encoding="utf-8") as f:
+def load_evals(evals_file: Path):
+    with open(evals_file, encoding="utf-8") as f:
         return json.load(f)["evals"]
 
 
@@ -271,13 +271,16 @@ def main():
     parser.add_argument("--a-label", metavar="LABEL", help="版本 A 的标签（默认 'A'）")
     parser.add_argument("--b", metavar="PATH", help="skill 版本 B 的路径")
     parser.add_argument("--b-label", metavar="LABEL", help="版本 B 的标签（默认 'B'）")
+    parser.add_argument("--evals", metavar="PATH", help="评测用例文件路径（默认 evals.json；做图版用 evals-pic.json）")
     args = parser.parse_args()
 
     if args.b and not args.a:
         parser.error("--b 需要与 --a 一起使用")
 
+    evals_file = Path(args.evals).resolve() if args.evals else EVALS_JSON
+
     configs = build_configs(args)
-    evals = load_evals()
+    evals = load_evals(evals_file)
     iteration = find_iteration(args.grade_only)
     outdir = SCRIPT_DIR / f"iteration-{iteration}"
 
